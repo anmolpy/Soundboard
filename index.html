@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Simple Tuner</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; margin-top: 100px; }
+    #note { font-size: 64px; font-weight: bold; }
+    #freq { font-size: 32px; color: gray; }
+  </style>
+</head>
+<body>
+  <h1>🎵 Simple Tuner</h1>
+  <div id="note">--</div>
+  <div id="freq">-- Hz</div>
+  <div style="display:flex;justify-content:center;margin:40px 0;">
+    <svg id="wheel" width="200" height="200" viewBox="0 0 200 200">
+      <circle cx="100" cy="100" r="90" stroke="#888" stroke-width="4" fill="#f9f9f9" />
+      
+      <g id="cent-markers">
+        
+      </g>
+      <line id="hand" x1="100" y1="100" x2="100" y2="30" stroke="#e74c3c" stroke-width="6" stroke-linecap="round" />
+      <circle cx="100" cy="100" r="8" fill="#888" />
+    </svg>
+  </div>
+  <button onclick="startTuner()">Start Tuner</button>
+
+  <script src="script.js"></script>
+</body>
+</html>
