@@ -1,107 +1,195 @@
-const noteElem = document.getElementById("note");
-const freqElem = document.getElementById("freq");
+const noteFrequencies = [
+        { note: 'C', frequency: 16.35 },
+        { note: 'C#', frequency: 17.32 },
+        { note: 'D', frequency: 18.35 },
+        { note: 'D#', frequency: 19.45 },
+        { note: 'E', frequency: 20.60 },
+        { note: 'F', frequency: 21.83 },
+        { note: 'F#', frequency: 23.12 },
+        { note: 'G', frequency: 24.50 },
+        { note: 'G#', frequency: 25.96 },
+        { note: 'A', frequency: 27.50 },
+        { note: 'A#', frequency: 29.14 },
+        { note: 'B', frequency: 30.87 }
+    ];
 
-const noteStrings = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    let audioContext = null;
+    let analyser = null;
+    let microphone = null;
+    let dataArray = null;
+    let isRunning = false;
+    let animationId = null;
+    let visualizerCanvas = null;
+    let visualizerCtx = null;
 
-function startTuner() {
-  navigator.mediaDevices.getUserMedia({ audio: true })
-    .then(stream => {
-      const audioContext = new (window.AudioContext)();
-      const source = audioContext.createMediaStreamSource(stream);
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 2048;
-      source.connect(analyser);
-
-      const buffer = new Float32Array(analyser.fftSize);
-
-      function updatePitch() {
-        analyser.getFloatTimeDomainData(buffer);
-        const pitch = autoCorrelate(buffer, audioContext.sampleRate);
-
-        if (pitch !== -1) {
-          const note = frequencyToNote(pitch);
-            const octave = Math.floor(note / 12) - 1;
-            noteElem.textContent = noteStrings[note % 12] + octave;
-          freqElem.textContent = pitch.toFixed(2) + " Hz";
-
-            const hand = document.getElementById("hand");
-            const minFreq = 50, maxFreq = 2000;
-            let angle = ((pitch - minFreq) / (maxFreq - minFreq)) * 360;
-            angle = Math.max(0, Math.min(360, angle));
-            hand.setAttribute("transform", `rotate(${angle} 100 100)`);
+  
+    function showPage(pageName) {
+        document.querySelectorAll('.page-section').forEach(section => {
+            section.classList.remove('active');
+        });
+        if (pageName === 'home') {
+            document.getElementById('home-page').classList.add('active');
+        } else if (pageName === 'tuner') {
+            document.getElementById('tuner-page').classList.add('active');
+            initializeVisualizer();
+        } else if (pageName === 'notes') {
+            alert('Notes feature coming soon!');
+            showPage('home');
+        } else if (pageName === 'about') {
+            alert('About page coming soon!');
+            showPage('home');
         }
-
-        requestAnimationFrame(updatePitch);
-      }
-
-      updatePitch();
-
-     
-        const markersGroup = document.getElementById("cent-markers");
-        if (markersGroup && markersGroup.childNodes.length === 0) {
-          for (let i = 0; i < 100; i++) {
-            const angle = (i / 100) * 2 * Math.PI;
-            const x1 = 100 + 80 * Math.sin(angle);
-            const y1 = 100 - 80 * Math.cos(angle);
-            const x2 = 100 + 90 * Math.sin(angle);
-            const y2 = 100 - 90 * Math.cos(angle);
-            const marker = document.createElementNS("http://www.w3.org/2000/svg", "line");
-            marker.setAttribute("x1", x1);
-            marker.setAttribute("y1", y1);
-            marker.setAttribute("x2", x2);
-            marker.setAttribute("y2", y2);
-            marker.setAttribute("stroke", i % 10 === 0 ? "#333" : "#bbb");
-            marker.setAttribute("stroke-width", i % 10 === 0 ? "3" : "1");
-            markersGroup.appendChild(marker);
-          }
-        }
-    })
-    .catch(err => console.error("Microphone error:", err));
-}
-
-
-function autoCorrelate(buffer, sampleRate) {
-  let SIZE = buffer.length;
-  let rms = 0;
-
-  for (let i = 0; i < SIZE; i++) rms += buffer[i] * buffer[i];
-  rms = Math.sqrt(rms / SIZE);
-  if (rms < 0.01) return -1; 
-
-  let r1 = 0, r2 = SIZE - 1, threshold = 0.2;
-  for (let i = 0; i < SIZE/2; i++) {
-    if (Math.abs(buffer[i]) < threshold) { r1 = i; break; }
-  }
-  for (let i = 1; i < SIZE/2; i++) {
-    if (Math.abs(buffer[SIZE-i]) < threshold) { r2 = SIZE-i; break; }
-  }
-
-  buffer = buffer.slice(r1, r2);
-  SIZE = buffer.length;
-
-  const c = new Array(SIZE).fill(0);
-  for (let i = 0; i < SIZE; i++) {
-    for (let j = 0; j < SIZE - i; j++) {
-      c[i] = c[i] + buffer[j] * buffer[j+i];
     }
-  }
-
-  let d = 0; 
-  while (c[d] > c[d+1]) d++;
-  let maxval = -1, maxpos = -1;
-  for (let i = d; i < SIZE; i++) {
-    if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
-  }
-
-  let T0 = maxpos;
-
-  return sampleRate / T0;
-}
 
 
-function frequencyToNote(freq) {
-  const noteNum = 12 * (Math.log(freq / 440) / Math.log(2));
-  return Math.round(noteNum) + 69; 
-}
+    function initializeVisualizer() {
+        visualizerCanvas = document.getElementById('visualizer');
+        if (visualizerCanvas) {
+            visualizerCtx = visualizerCanvas.getContext('2d');
+            visualizerCanvas.width = visualizerCanvas.offsetWidth;
+            visualizerCanvas.height = visualizerCanvas.offsetHeight;
+        }
+    }
 
-XMLDocument
+    async function startTuner() {
+        try {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 4096;
+            analyser.smoothingTimeConstant = 0.8;
+            
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            microphone = audioContext.createMediaStreamSource(stream);
+            microphone.connect(analyser);
+            
+            dataArray = new Float32Array(analyser.fftSize);
+            
+            isRunning = true;
+            document.getElementById('startButton').disabled = true;
+            document.getElementById('stopButton').disabled = false;
+            
+            detectPitch();
+        } catch (error) {
+            console.error('Error accessing microphone:', error);
+            alert('Please allow microphone access to use the tuner.');
+        }
+    }
+
+    function stopTuner() {
+        isRunning = false;
+        if (animationId) cancelAnimationFrame(animationId);
+        if (microphone) {
+            microphone.disconnect();
+            microphone = null;
+        }
+        if (audioContext) {
+            audioContext.close();
+            audioContext = null;
+        }
+        document.getElementById('startButton').disabled = false;
+        document.getElementById('stopButton').disabled = true;
+        document.getElementById('noteDisplay').textContent = '--';
+        document.getElementById('frequency').textContent = '0.00';
+        document.getElementById('cents').textContent = '0';
+        document.getElementById('meterNeedle').style.transform = 
+            'translateX(-50%) translateY(-50%) rotate(0deg)';
+        if (visualizerCtx) {
+            visualizerCtx.clearRect(0, 0, visualizerCanvas.width, visualizerCanvas.height);
+        }
+    }
+
+    function autoCorrelate(buffer, sampleRate) {
+        const SIZE = buffer.length;
+        const MAX_SAMPLES = Math.floor(SIZE / 2);
+        let bestOffset = -1;
+        let bestCorrelation = 0;
+        let rms = 0;
+        
+        for (let i = 0; i < SIZE; i++) {
+            const val = buffer[i];
+            rms += val * val;
+        }
+        rms = Math.sqrt(rms / SIZE);
+        if (rms < 0.01) return -1;
+        
+        let correlations = new Array(MAX_SAMPLES);
+        for (let offset = 0; offset < MAX_SAMPLES; offset++) {
+            let correlation = 0;
+            for (let i = 0; i < MAX_SAMPLES; i++) {
+                correlation += Math.abs(buffer[i] - buffer[i + offset]);
+            }
+            correlation = 1 - (correlation / MAX_SAMPLES);
+            correlations[offset] = correlation;
+            if (correlation > 0.9 && correlation > bestCorrelation) {
+                bestCorrelation = correlation;
+                bestOffset = offset;
+            }
+        }
+        if (bestCorrelation > 0.01 && bestOffset !== -1) {
+            return sampleRate / bestOffset;
+        }
+        return -1;
+    }
+
+    function getClosestNote(frequency) {
+        const A4 = parseFloat(document.getElementById('calibration').value);
+        const A4_INDEX = 57; 
+        const noteNumber = 12 * Math.log2(frequency / A4) + A4_INDEX;
+        const roundedNote = Math.round(noteNumber);
+        const cents = Math.round((noteNumber - roundedNote) * 100);
+        const noteIndex = ((roundedNote % 12) + 12) % 12;
+        const octave = Math.floor((roundedNote + 9) / 12);
+        return {
+            note: noteFrequencies[noteIndex].note,
+            octave: octave,
+            cents: cents,
+            frequency: frequency
+        };
+    }
+
+    function detectPitch() {
+        if (!isRunning || !analyser) return;
+        analyser.getFloatTimeDomainData(dataArray);
+        const pitch = autoCorrelate(dataArray, audioContext.sampleRate);
+        if (pitch !== -1) {
+            const noteData = getClosestNote(pitch);
+            document.getElementById('noteDisplay').textContent = 
+                noteData.note + noteData.octave;
+            document.getElementById('frequency').textContent = 
+                noteData.frequency.toFixed(2);
+            document.getElementById('cents').textContent = noteData.cents;
+            
+            const rotation = (noteData.cents / 50) * 25;
+            document.getElementById('meterNeedle').style.transform = 
+                `translateX(-50%) translateY(-50%) rotate(${rotation}deg)`;
+
+            const noteDisplay = document.getElementById('noteDisplay');
+            if (Math.abs(noteData.cents) < 5) {
+                noteDisplay.classList.add('in-tune');
+            } else {
+                noteDisplay.classList.remove('in-tune');
+            }
+        }
+        drawVisualizer();
+        animationId = requestAnimationFrame(detectPitch);
+    }
+
+    function drawVisualizer() {
+        if (!visualizerCtx || !analyser) return;
+        const bufferLength = analyser.frequencyBinCount;
+        const freqArray = new Uint8Array(bufferLength);
+        analyser.getByteFrequencyData(freqArray);
+        visualizerCtx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        visualizerCtx.fillRect(0, 0, visualizerCanvas.width, visualizerCanvas.height);
+        const barWidth = (visualizerCanvas.width / bufferLength) * 2.5;
+        let x = 0;
+        for (let i = 0; i < bufferLength; i += 4) {
+            const barHeight = (freqArray[i] / 255) * visualizerCanvas.height;
+            const gradient = visualizerCtx.createLinearGradient(0, 0, 0, visualizerCanvas.height);
+            gradient.addColorStop(0, '#ec4899');
+            gradient.addColorStop(1, '#6366f1');
+            visualizerCtx.fillStyle = gradient;
+            visualizerCtx.fillRect(x, visualizerCanvas.height - barHeight, barWidth, barHeight);
+            x += barWidth + 1;
+        }
+    }

@@ -1,30 +1,141 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Simple Tuner</title>
-  <style>
-    body { font-family: sans-serif; text-align: center; margin-top: 100px; }
-    #note { font-size: 64px; font-weight: bold; }
-    #freq { font-size: 32px; color: gray; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoundBoard</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>🎵 Simple Tuner</h1>
-  <div id="note">--</div>
-  <div id="freq">-- Hz</div>
-  <div style="display:flex;justify-content:center;margin:40px 0;">
-    <svg id="wheel" width="200" height="200" viewBox="0 0 200 200">
-      <circle cx="100" cy="100" r="90" stroke="#888" stroke-width="4" fill="#f9f9f9" />
-      
-      <g id="cent-markers">
-        
-      </g>
-      <line id="hand" x1="100" y1="100" x2="100" y2="30" stroke="#e74c3c" stroke-width="6" stroke-linecap="round" />
-      <circle cx="100" cy="100" r="8" fill="#888" />
-    </svg>
-  </div>
-  <button onclick="startTuner()">Start Tuner</button>
+    <div class="particles" id="particles"></div>
+    <nav>
+        <div class="nav-container">
+            <div class="logo" onclick="showPage('home')">SoundBoard</div>
+            <ul class="nav-links">
+                <li><a onclick="showPage('home')">Home</a></li>
+                <li><a onclick="showPage('tuner')">Tuner</a></li>
+                <li><a onclick="showPage('notes')">Notes</a></li>
+                <li><a onclick="showPage('about')">About</a></li>
+            </ul>
+        </div>
+    </nav>
+    <div id="home-page" class="page-section active">
+        <section class="hero">
+            <h1>Welcome to SoundBoard</h1>
+            <p>Your all-in-one creative companion for capturing musical inspiration, perfecting your pitch, and organizing your artistic journey</p>
+            <a onclick="showPage('tuner')" class="cta-button">Try the Tuner</a>
+        </section>
+        <section class="features">
+            <h2>Core Features</h2>
+            <div class="features-grid">
+                <div class="feature-card" onclick="showPage('notes')">
+                    <div class="feature-icon">📝</div>
+                    <h3>Smart Notes</h3>
+                    <p>Capture your musical ideas instantly. Store lyrics, chord progressions, melodies, and creative concepts all in one organized space with tags and categories.</p>
+                    <span class="feature-tag">Available Now</span>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎸</div>
+                    <h3>Instrument Riffs</h3>
+                    <p>Record and organize guitar riffs, bass lines, and instrumental ideas. Add tablature, audio recordings, and notes to never lose that perfect riff again.</p>
+                    <span class="feature-tag">Available Now</span>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🥁</div>
+                    <h3>Drum Patterns</h3>
+                    <p>Create, store, and categorize drum patterns with our visual beat sequencer. Perfect for beatmakers and drummers to build their rhythm library.</p>
+                    <span class="feature-tag">Available Now</span>
+                </div>
+                
 
-  <script src="script.js"></script>
-</body>
-</html>
+
+                <div class="feature-card" onclick="showPage('tuner')">
+                    <div class="feature-icon">🎵</div>
+                    <h3>Advanced Tuner</h3>
+                    <p>Professional-grade chromatic tuner that tracks all pitches in real-time. Perfect for tuning instruments and practicing vocal pitch accuracy.</p>
+                    <span class="feature-tag">Click to Open</span>
+                </div>
+            </div>
+
+           
+            <div class="coming-soon">
+                <h3>🚀 Future Features</h3>
+                <div class="future-features">
+                    <div class="future-item">
+                        <strong>🎹 Chord Progression Builder</strong>
+                        <p>Visual chord progression tool with suggestions and MIDI export</p>
+                    </div>
+                    <div class="future-item">
+                        <strong>🎤 Vocal Trainer</strong>
+                        <p>Pitch correction exercises and vocal range expansion tools</p>
+                    </div>
+                    <div class="future-item">
+                        <strong>🎼 Sheet Music Generator</strong>
+                        <p>Convert your ideas into professional sheet music automatically</p>
+                    </div>
+                    <div class="future-item">
+                        <strong>👥 Collaboration Hub</strong>
+                        <p>Share projects and collaborate with other musicians in real-time</p>
+                    </div>
+                    <div class="future-item">
+                        <strong>🎧 Audio Recorder</strong>
+                        <p>Multi-track recording with built-in effects and mixing capabilities</p>
+                    </div>
+                    <div class="future-item">
+                        <strong>📊 Practice Tracker</strong>
+                        <p>Monitor your practice sessions and track improvement over time</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div id="tuner-page" class="page-section">
+        <div class="tuner-container">
+            <div class="tuner-display">
+                <h1 class="tuner-title">🎵 Chromatic Tuner</h1>
+                
+                <div class="note-display" id="noteDisplay">--</div>
+                <div class="frequency-display">
+                    <span id="frequency">0.00</span> Hz
+                </div>
+                
+                <div class="tuner-meter">
+                    <div class="meter-marks">
+                        <div class="meter-mark"></div>
+                        <div class="meter-mark"></div>
+                        <div class="meter-mark"></div>
+                        <div class="meter-mark center"></div>
+                        <div class="meter-mark"></div>
+                        <div class="meter-mark"></div>
+                        <div class="meter-mark"></div>
+                    </div>
+                    <div class="meter-needle" id="meterNeedle"></div>
+                </div>
+                
+                <div class="cents-display">
+                    <span id="cents">0</span> cents
+                </div>
+                
+                <canvas class="visualizer-canvas" id="visualizer"></canvas>
+                
+                <div class="control-buttons">
+                    <button class="control-button" id="startButton" onclick="startTuner()">Start Tuner</button>
+                    <button class="control-button" id="stopButton" onclick="stopTuner()" disabled>Stop Tuner</button>
+                </div>
+                
+                <div class="calibration-control">
+                    <label for="calibration">A4 Calibration:</label>
+                    <input type="number" id="calibration" value="440" min="430" max="450" step="0.1">
+                    <span>Hz</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2025 SoundBoard. Empowering musicians worldwide.</p>
+        <p style="opacity: 0.7; font-size: 0.9rem; margin-top: 1rem;">Made with ♪ for musicians, by musicians</p>
+    </footer>
+
+    <script src="script.js"></script>
